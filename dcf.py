@@ -18,7 +18,7 @@ MODEL_LENGTH = 5
 DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
 
 # TODO estimate beta
-def beta():
+def beta(symbol):
     return 1.5
 
 # TODO: estimate erp
@@ -27,9 +27,13 @@ def erp():
 
 # TODO: estimate wacc
 def wacc(symbol, creditRating):
+    income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
+    balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
+    key_stats = iex.stock.key_stats(symbol)
+    current_price = iex.stock.price(symbol)
     risk_free = usgov.yieldcurve.get_yield()['10year']
-    equity_risk = erp()
-    company_beta = beta()
+    equity_premium = erp()
+    company_beta = beta(symbol)
     spreads = {
     'aaa': 0.0075,
     'aa2': 0.010,
@@ -48,17 +52,21 @@ def wacc(symbol, creditRating):
     'd2' : 0.1938,
     }
     default_spread = spreads[creditRating]
-    tax_rate = iex.stock.income_statement(symbol, period='annual')[]
-    current_debt =
-    current_equity =
+    tax_rate = income_statement['income'][0]['incomeTax'] / income_statement['income'][0]['pretaxIncome']
+    current_debt = balance_sheet['balancesheet'][0]['longTermDebt']
+    current_shares_outstanding = key_stats['sharesOutstanding']
+    market_equity = current_shares_outstanding * current_price
+    percent_debt = current_debt / (market_equity + current_debt)
+    percent_equity = current_equity / (market_equity + current_debt)
+    equity_risk = equity_premium * beta
 
-    return risk_free
+    return market_equity
 
 # TODO: estimate terminal wacc
 def terminal_wacc():
     return 0.11
 
-def dcf_2(symbol):
+def dcf_2(symbol, creditRating):
     # brings in json data from iex finance module
     income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
     balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
@@ -105,7 +113,7 @@ def dcf_2(symbol):
         pf_revenues.append(next_revenue)
     vprint(pf_revenues)
 
-    wacc_yearly = [wacc()]
+    wacc_yearly = [wacc(symbol, creditRating)]
     for n in range(MODEL_LENGTH):
         next_wacc = wacc_yearly[(len(wacc_yearly)-1)] - ((wacc()-terminal_wacc())/MODEL_LENGTH)
         wacc_yearly.append(next_wacc)

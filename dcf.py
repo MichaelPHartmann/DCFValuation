@@ -1,8 +1,11 @@
 import os
 import sys
-PATH_TO_APIS = os.path.abspath("../iexfinancepy")
-sys.path.insert(0, PATH_TO_APIS)
+PATH_TO_API = os.path.abspath("../iexfinancepy")
+sys.path.insert(0, PATH_TO_API)
 import iex.stock
+import usgov.yieldcurve
+from bs4 import BeautifulSoup as bs
+import requests
 
 VERBOSE = True
 
@@ -12,14 +15,44 @@ def vprint(*args, **kwargs):
 
 LAST_YEARS = 4
 MODEL_LENGTH = 5
+DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
+
+# TODO estimate beta
+def beta():
+    return 1.5
 
 # TODO: estimate erp
 def erp():
-    return 0.05
+    0.05
 
 # TODO: estimate wacc
-def wacc():
-    return 0.10
+def wacc(symbol, creditRating):
+    risk_free = usgov.yieldcurve.get_yield()['10year']
+    equity_risk = erp()
+    company_beta = beta()
+    spreads = {
+    'aaa': 0.0075,
+    'aa2': 0.010,
+    'a1' : 0.0125,
+    'a2' : 0.0138,
+    'a3' : 0.0156,
+    'baa2' : 0.02,
+    'ba1' : 0.03,
+    'ba2' : 0.036,
+    'b1' : 0.045,
+    'b2' : 0.054,
+    'b3' : 0.066,
+    'caa' : 0.09,
+    'ca2' : 0.1108,
+    'c2' : 0.1454,
+    'd2' : 0.1938,
+    }
+    default_spread = spreads[creditRating]
+    tax_rate = iex.stock.income_statement(symbol, period='annual')[]
+    current_debt =
+    current_equity =
+
+    return risk_free
 
 # TODO: estimate terminal wacc
 def terminal_wacc():
@@ -63,7 +96,7 @@ def dcf_2(symbol):
     current_cash_flow = cash_flow['cashflow'][0]['cashFlow']
     current_operating_margin = current_operating_income / current_revenue
     current_debt = balance_sheet['balancesheet'][0]['longTermDebt']
-    current_cash = balance_sheet['balancesheet'][0]['currentCash'] + balance_sheet['balancesheet'][0]['shortTermInvestments']
+    current_cash = (balance_sheet['balancesheet'][0]['currentCash'] + balance_sheet['balancesheet'][0]['shortTermInvestments'])
     current_shares_outstanding = key_stats['sharesOutstanding']
 
     pf_revenues = [current_revenue]
@@ -112,9 +145,6 @@ def dcf_2(symbol):
     # divides by shares outstanding
     value_per_share = equity_value / current_shares_outstanding
     vprint(value_per_share)
-
-
-print(dcf_2('AAPL'))
 
 
 """

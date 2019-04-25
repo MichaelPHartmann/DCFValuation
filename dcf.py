@@ -56,11 +56,18 @@ def wacc(symbol, creditRating):
     current_debt = balance_sheet['balancesheet'][0]['longTermDebt']
     current_shares_outstanding = key_stats['sharesOutstanding']
     market_equity = current_shares_outstanding * current_price
-    percent_debt = current_debt / (market_equity + current_debt)
-    percent_equity = current_equity / (market_equity + current_debt)
-    equity_risk = equity_premium * beta
+    print(type(default_spread))
+    print(type(risk_free)) # string
+    print(type(tax_rate))
+    print(type(current_debt))
+    print(type(market_equity))
+    #adjusted_debt_risk = ((default_spread + risk_free) * (1 - tax_rate)) * (current_debt / (market_equity + current_debt))
+    #adjusted_equity_risk = ((equity_premium * beta) + risk_free) * (current_equity / (market_equity + current_debt))
+    equity_risk = ((equity_premium * beta) + risk_free)
+    debt_risk = (default_spread + risk_free)
+    current_wacc = 200# adjusted_debt_risk + adjusted_equity_risk
 
-    return market_equity
+    return current_wacc
 
 # TODO: estimate terminal wacc
 def terminal_wacc():

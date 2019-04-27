@@ -18,12 +18,19 @@ MODEL_LENGTH = 5
 DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
 
 # TODO estimate beta
-def beta(symbol):
+def beta():
     return 1.5
 
 # TODO: estimate erp
 def erp():
-    0.05
+    return 0.05
+
+# returns financials as a tuple, possibly useful in saving messages
+def get_financials(symbol, period, last):
+    income = iex.stock.income_statement(symbol, period=period, last=last)
+    balance = iex.stock.balance_sheet(symbol, period=period, last=last)
+    cash = iex.stock.cash_flow(symbol, period=period, last=last)
+    return income, balance, cash;
 
 # TODO: estimate wacc
 def wacc(symbol, creditRating):
@@ -33,7 +40,7 @@ def wacc(symbol, creditRating):
     current_price = iex.stock.price(symbol)
     risk_free = usgov.yieldcurve.get_yield()['10year']
     equity_premium = erp()
-    company_beta = beta(symbol)
+    company_beta = beta()
     spreads = {
     'aaa': 0.0075,
     'aa2': 0.010,
@@ -56,11 +63,10 @@ def wacc(symbol, creditRating):
     current_debt = balance_sheet['balancesheet'][0]['longTermDebt']
     current_shares_outstanding = key_stats['sharesOutstanding']
     market_equity = current_shares_outstanding * current_price
+    print(type(equity_premium))
+    print(type(beta))
+    print(type(risk_free))
     print(type(default_spread))
-    print(type(risk_free)) # string
-    print(type(tax_rate))
-    print(type(current_debt))
-    print(type(market_equity))
     #adjusted_debt_risk = ((default_spread + risk_free) * (1 - tax_rate)) * (current_debt / (market_equity + current_debt))
     #adjusted_equity_risk = ((equity_premium * beta) + risk_free) * (current_equity / (market_equity + current_debt))
     equity_risk = ((equity_premium * beta) + risk_free)

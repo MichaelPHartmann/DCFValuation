@@ -1,6 +1,6 @@
 import os
 import sys
-PATH_TO_API = os.path.abspath("../iexfinancepy")
+PATH_TO_API = os.path.abspath("../FinMesh")
 sys.path.insert(0, PATH_TO_API)
 import iex.stock
 import usgov.yieldcurve
@@ -19,6 +19,7 @@ DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
 
 # TODO estimate beta
 def beta():
+    
     return 1.5
 
 # TODO: estimate erp
@@ -33,10 +34,15 @@ def get_financials(symbol, period, last):
     return income, balance, cash;
 
 # TODO: estimate wacc
-def wacc(symbol, creditRating):
-    income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
+def wacc(income_statement=None, balance_sheet=None, key_stats=None, current_price=None, creditRating):
+    # if this function is nested inside another function with the same requests, pull those instead of making new request
+    if not income_statement:
+        income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
+    if not balance_sheet:
     balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
+    if not key_stats:
     key_stats = iex.stock.key_stats(symbol)
+    if not current_price:
     current_price = iex.stock.price(symbol)
     risk_free = usgov.yieldcurve.get_yield()['10year']
     equity_premium = erp()
@@ -63,16 +69,11 @@ def wacc(symbol, creditRating):
     current_debt = balance_sheet['balancesheet'][0]['longTermDebt']
     current_shares_outstanding = key_stats['sharesOutstanding']
     market_equity = current_shares_outstanding * current_price
-    print(type(equity_premium))
-    print(type(beta))
-    print(type(risk_free))
-    print(type(default_spread))
-    #adjusted_debt_risk = ((default_spread + risk_free) * (1 - tax_rate)) * (current_debt / (market_equity + current_debt))
-    #adjusted_equity_risk = ((equity_premium * beta) + risk_free) * (current_equity / (market_equity + current_debt))
+    adjusted_debt_risk = ((default_spread + risk_free) * (1 - tax_rate)) * (current_debt / (market_equity + current_debt))
+    adjusted_equity_risk = ((equity_premium * beta) + risk_free) * (current_equity / (market_equity + current_debt))
     equity_risk = ((equity_premium * beta) + risk_free)
     debt_risk = (default_spread + risk_free)
-    current_wacc = 200# adjusted_debt_risk + adjusted_equity_risk
-
+    current_wacc = adjusted_debt_risk + adjusted_equity_risk
     return current_wacc
 
 # TODO: estimate terminal wacc
@@ -166,91 +167,6 @@ def dcf_2(symbol, creditRating):
     # divides by shares outstanding
     value_per_share = equity_value / current_shares_outstanding
     vprint(value_per_share)
-
-
-"""
-def dcf(symbol):
-    income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
-    balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
-    cash_flow = iex.stock.cash_flow(symbol, period='annual', last=LAST_YEARS)
-
-    # assertains that there are 4 years of data
-    assert(len(cash_flow['cashflow']) == LAST_YEARS)#, "Not enough data")
-    assert(len(income_statement['income']) == LAST_YEARS)#, "Not enough data")
-    assert(len(balance_sheet['balance_sheet']) == LAST_YEARS)#, "Not enough data")
-
-    # computes averages
-    for i in range(LAST_YEARS-1):
-        average_revenue_growth += (income_statement['income'][i]['totalRevenue'] / income_statement['income'][i+1]['totalRevenue']) - 1
-        average_operating_margin += income_statement['income'][i]['operatingIncome'] / income_statement['income'][i]['totalRevenue']
-        average_tax_rate += income_statement['income'][i]['incomeTax'] / income_statement['income'][i]['pretaxIncome']
-        capex_ratio += cash_flow['cashflow'][i]['capitalExpenditures'] / income_statement['income'][i]['totalRevenue']
-    average_revenue_growth /= LAST_YEARS - 1
-    average_operating_margin /= LAST_YEARS - 1
-    average_tax_rate /= LAST_YEARS - 1
-    average_capex_ratio /= LAST_YEARS - 1
-
-    # current values for 'base year'
-    current_revenue = income_statement['income'][0]['totalRevenue']
-    current_operating_income = income_statement['income'][0]['operatingIncome']
-    current_tax_paid = income_statement['income'][0]['incomeTax']
-    current_tax_adjusted_income = current_operating_income - current_tax_paid
-    current_capex = cash_flow['cashflow'][0]['capitalExpenditures']
-    current_cash_flow = cash_flow['cashflow'][0]['cashFlow']
-    current_operating_margin = current_operating_margin / current_revenue
-
-    # calculates pro-forma revenues based on average revenue growth
-    pf_revenues = [current_revenue]
-    for a in range(MODEL_LENGTH):
-        next_revenue = pf_revenues[a] * (1 + average_revenue_growth)
-        pf_revenues.append(next_revenue)
-    vprint(pf_revenues)
-
-    # calculates pro-forma operating income based on average operating income
-    pf_op_income = [current_operating_income]
-    for b in pf_revenues[1:]:
-        next_op_income = b * average_operating_margin
-        pf_op_income.append(next_op_income)
-    vprint(pf_op_income)
-
-    # calculates pro-forma tax-adjusted income based on average tax rate
-    pf_ta_income = [current_tax_adjusted_income]
-    for c in pf_op_income[1:]:
-        next_ta_income = c * (1 - average_tax_rate)
-        pf_ta_income.append(next_ta_income)
-    vprint(pf_ta_income)
-
-    # calculates reinvestment based on average capex to revenue ratio
-    pf_reinvestment = [current_capex]
-    for d in pf_revenues[1:]:
-        next_reinvestment = d * average_capex_ratio
-        pf_reinvestment.append(next_reinvestment)
-    vprint(pf_reinvestment)
-
-    # calculates free cash flow to firm
-    pf_fcff = [current_cash_flow]
-    for e in pf_ta_income[1:]:
-        next_fcff = e - pf_reinvestment[len(pf_fcff)]
-        pf_fcff.append(next_fcff)
-    vprint(pf_fcff)
-
-    # calculates accumulated discount factor
-    discount_factor = [1/(1+(wacc(symbol)))]
-    for f in range(MODEL_LENGTH):
-        next_discount_factor = discount_factor[len(discount_factor)-1] * (1/(1+(wacc(symbol))))
-        discount_factor.append(next_discount_factor)
-    vprint(discount_factor)
-
-    # calculates accumulated discount factor present value
-    accumulated_dcf = []
-    dcf_counter = 0
-    for g in pf_fcff[1:]:
-        next_pv = g * discount_factor[dcf_counter]
-        dcf_counter += 1
-        accumulated_dcf.append(next_pv)
-    vprint(accumulated_dcf)
-"""
-
 
 
 #if __name__ == "__main__":

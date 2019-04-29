@@ -18,9 +18,22 @@ MODEL_LENGTH = 5
 DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
 
 # TODO estimate beta
-def beta():
-    
-    return 1.5
+def beta(symbol, index=None):
+    company_historic = iex.stock.chart(symbol, range='5y', chartCloseOnly=True)
+    # this allows you to specify a tradeable index instead of SPY
+    if index:
+        index_historic = iex.stock.chart(index, range='5y', chartCloseOnly=True)
+    else:
+        index_historic = iex.stock.chart(SPY, range='5y', chartCloseOnly=True)
+    company_historic_close = []
+    index_historic_close = []
+    assert len(company_historic) == len(index_historic)
+    for d in range(len(company_historic)):
+        chc = company_historic[d]['close']
+        company_historic_close.append(chc)
+        ihc = index_historic[d]['close']
+        index_historic_close.append(ihc)
+    return company_historic_close
 
 # TODO: estimate erp
 def erp():
@@ -34,16 +47,16 @@ def get_financials(symbol, period, last):
     return income, balance, cash;
 
 # TODO: estimate wacc
-def wacc(income_statement=None, balance_sheet=None, key_stats=None, current_price=None, creditRating):
+def wacc(symbol, creditRating, income_statement=None, balance_sheet=None, key_stats=None, current_price=None):
     # if this function is nested inside another function with the same requests, pull those instead of making new request
     if not income_statement:
         income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
     if not balance_sheet:
-    balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
+        balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
     if not key_stats:
-    key_stats = iex.stock.key_stats(symbol)
+        key_stats = iex.stock.key_stats(symbol)
     if not current_price:
-    current_price = iex.stock.price(symbol)
+        current_price = iex.stock.price(symbol)
     risk_free = usgov.yieldcurve.get_yield()['10year']
     equity_premium = erp()
     company_beta = beta()

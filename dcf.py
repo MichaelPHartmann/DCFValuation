@@ -6,6 +6,8 @@ import iex.stock
 import usgov.yieldcurve
 from bs4 import BeautifulSoup as bs
 import requests
+from scipy import stats
+import numpy
 
 VERBOSE = True
 
@@ -15,25 +17,52 @@ def vprint(*args, **kwargs):
 
 LAST_YEARS = 4
 MODEL_LENGTH = 5
-DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
+#DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
+
+
 
 # TODO estimate beta
-def beta(symbol, index=None):
-    company_historic = iex.stock.chart(symbol, range='5y', chartCloseOnly=True)
+def beta(symbol, range=None, type=None, averaging=None, index=None):
+    # returns defualt range of 5 Years
+    for i in range(5):
+        print('Done')
+    if not range:
+        range = '5y'
+    company_historic = iex.stock.chart(symbol, range=range, chartCloseOnly=True)
     # this allows you to specify a tradeable index instead of SPY
     if index:
-        index_historic = iex.stock.chart(index, range='5y', chartCloseOnly=True)
+        index_historic = iex.stock.chart(index, range=range, chartCloseOnly=True)
     else:
-        index_historic = iex.stock.chart(SPY, range='5y', chartCloseOnly=True)
+        index_historic = iex.stock.chart('SPY', range=range, chartCloseOnly=True)
+    assert len(company_historic) == len(index_historic)
+    # empty list creation and iteration through json to build closing values
     company_historic_close = []
     index_historic_close = []
-    assert len(company_historic) == len(index_historic)
-    for d in range(len(company_historic)):
+    for num in range(length):
         chc = company_historic[d]['close']
         company_historic_close.append(chc)
         ihc = index_historic[d]['close']
         index_historic_close.append(ihc)
-    return company_historic_close
+    # simple linear regression based only daily close data - most basic
+    if not type:
+        reg = stats.linregress(index_historic_close, company_historic_close)
+    # averaged linear regression where the average of the last n days is used (rolling slice)
+    n = 0 # here n is a counter that will eventually equal length of list
+    company_average_beta = []
+    index_average_beta = []
+    if type is averageReg:
+        while n + (averaging-1) <= length:
+            comp_slice = company_historic_close[n:n + (averaging-1)]
+            ind_slice = index_historic_close[n:n + (averaging-1)]
+            comp_av = sum(comp_slice)/len(comp_slice)
+            ind_av = sum(ind_slice)/len(ind_slice)
+            company_average_beta.append(comp_av)
+            index_average_beta.append(ind_av)
+            n += 1
+            print(company_average_beta)
+
+    #if type is bottomUpReg:
+    return reg
 
 # TODO: estimate erp
 def erp():
@@ -93,7 +122,7 @@ def wacc(symbol, creditRating, income_statement=None, balance_sheet=None, key_st
 def terminal_wacc():
     return 0.11
 
-def dcf_2(symbol, creditRating):
+def dcf(symbol, creditRating):
     # brings in json data from iex finance module
     income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
     balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
@@ -134,12 +163,15 @@ def dcf_2(symbol, creditRating):
     current_cash = (balance_sheet['balancesheet'][0]['currentCash'] + balance_sheet['balancesheet'][0]['shortTermInvestments'])
     current_shares_outstanding = key_stats['sharesOutstanding']
 
+    # calculates pro-forma revenues based on average revenue growth
+    # will need to be changed to accept any growth rates
     pf_revenues = [current_revenue]
     for a in range(MODEL_LENGTH):
         next_revenue = pf_revenues[a] * (1 + average_revenue_growth)
         pf_revenues.append(next_revenue)
     vprint(pf_revenues)
 
+    # calculates WACC for the year based on moving to terminal WACC
     wacc_yearly = [wacc(symbol, creditRating)]
     for n in range(MODEL_LENGTH):
         next_wacc = wacc_yearly[(len(wacc_yearly)-1)] - ((wacc()-terminal_wacc())/MODEL_LENGTH)
@@ -158,6 +190,7 @@ def dcf_2(symbol, creditRating):
 
     # MAIN CALCULATIONS
     # for each year of the model this calculates present value and adds it to a list
+    # each of these will need to be changed to allow manipulation of each variable
     yearly_pv = []
     for r in pf_revenues[1:]:
         next_op_marg = r * average_operating_margin

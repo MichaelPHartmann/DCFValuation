@@ -10,4 +10,4 @@ from dcf import *
 
 #print(iex.stock.company('AAPL'))
 
-print(beta('AAPL', range='1m'))
+print(beta('AAPL', period='1m', method='averageReg'))

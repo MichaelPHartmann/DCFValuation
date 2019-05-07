@@ -20,49 +20,56 @@ MODEL_LENGTH = 5
 #DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
 
 
+def beta(symbol, period=None, method=None, averaging=None, index=None):
+    # DEFAULTS
+    if not period:
+        period = '5y'
+    if not averaging:
+        averaging = 5
+    company_historic = iex.stock.chart(symbol, period=period, chartCloseOnly=True)
+    length = len(company_historic)
 
-# TODO estimate beta
-def beta(symbol, range=None, type=None, averaging=None, index=None):
-    # returns defualt range of 5 Years
-    for i in range(5):
-        print('Done')
-    if not range:
-        range = '5y'
-    company_historic = iex.stock.chart(symbol, range=range, chartCloseOnly=True)
-    # this allows you to specify a tradeable index instead of SPY
+    # INDEX - Specify index and establish default
     if index:
-        index_historic = iex.stock.chart(index, range=range, chartCloseOnly=True)
+        index_historic = iex.stock.chart(index, period=period, chartCloseOnly=True)
     else:
-        index_historic = iex.stock.chart('SPY', range=range, chartCloseOnly=True)
+        index_historic = iex.stock.chart('SPY', period=period, chartCloseOnly=True)
     assert len(company_historic) == len(index_historic)
-    # empty list creation and iteration through json to build closing values
+
+    # CLOSE PRICES - Isolating daily close prices
     company_historic_close = []
     index_historic_close = []
-    for num in range(length):
+    for d in range(len(company_historic)):
         chc = company_historic[d]['close']
         company_historic_close.append(chc)
         ihc = index_historic[d]['close']
         index_historic_close.append(ihc)
-    # simple linear regression based only daily close data - most basic
-    if not type:
-        reg = stats.linregress(index_historic_close, company_historic_close)
-    # averaged linear regression where the average of the last n days is used (rolling slice)
+
+    # REGRESSION METHOD - Method is selected with defaults in place
+    company_average_close = []
+    index_average_close = []
     n = 0 # here n is a counter that will eventually equal length of list
-    company_average_beta = []
-    index_average_beta = []
-    if type is averageReg:
+    if method is 'averageReg':
+        # AVERAGE REGRESSION - Rolling slice based on Input
         while n + (averaging-1) <= length:
             comp_slice = company_historic_close[n:n + (averaging-1)]
             ind_slice = index_historic_close[n:n + (averaging-1)]
             comp_av = sum(comp_slice)/len(comp_slice)
             ind_av = sum(ind_slice)/len(ind_slice)
-            company_average_beta.append(comp_av)
-            index_average_beta.append(ind_av)
+            company_average_close.append(comp_av)
+            index_average_close.append(ind_av)
             n += 1
-            print(company_average_beta)
+        reg = stats.linregress(index_average_close, company_average_close)
 
-    #if type is bottomUpReg:
+    #elif method is 'bottomUpReg':
+    #elif method is 'hybridReg':
+    else:
+        # SIMPLE REGRESSION - Establishes default
+        print(company_historic_close)
+        reg = stats.linregress(index_historic_close, company_historic_close)
+
     return reg
+
 
 # TODO: estimate erp
 def erp():

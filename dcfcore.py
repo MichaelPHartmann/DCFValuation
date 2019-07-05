@@ -8,6 +8,9 @@ from bs4 import BeautifulSoup as bs
 import requests
 from scipy import stats
 import numpy
+import re
+from requests_html import HTMLSession
+import stockclass
 
 VERBOSE = True
 
@@ -15,9 +18,8 @@ def vprint(*args, **kwargs):
     if VERBOSE:
         print(*args, **kwargs)
 
-LAST_YEARS = 4
-MODEL_LENGTH = 5
 #DAMODARAN_URL = 'http://pages.stern.nyu.edu/~adamodar/'
+
 
 
 def beta(symbol, period=None, method=None, averaging=None, index=None):
@@ -73,22 +75,15 @@ def beta(symbol, period=None, method=None, averaging=None, index=None):
 
 # TODO: estimate erp
 def erp():
-    return 0.05
+    return 0.40
 
-# returns financials as a tuple, possibly useful in saving messages
-def get_financials(symbol, period, last):
-    income = iex.stock.income_statement(symbol, period=period, last=last)
-    balance = iex.stock.balance_sheet(symbol, period=period, last=last)
-    cash = iex.stock.cash_flow(symbol, period=period, last=last)
-    return income, balance, cash;
-
-# TODO: estimate wacc
+#
 def wacc(symbol, creditRating, income_statement=None, balance_sheet=None, key_stats=None, current_price=None):
     # if this function is nested inside another function with the same requests, pull those instead of making new request
     if not income_statement:
-        income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
+        income_statement = iex.stock.income_statement(symbol, period='annual', last=last_years)
     if not balance_sheet:
-        balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
+        balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=last_years)
     if not key_stats:
         key_stats = iex.stock.key_stats(symbol)
     if not current_price:
@@ -129,17 +124,22 @@ def wacc(symbol, creditRating, income_statement=None, balance_sheet=None, key_st
 def terminal_wacc():
     return 0.11
 
-def dcf(symbol, creditRating):
+def dcf(symbol, creditRating, last_years=None, model_length=None):
+    if not last_years:
+        last_years = 4
+    if not model_length:
+        model_length = 5
+
     # brings in json data from iex finance module
-    income_statement = iex.stock.income_statement(symbol, period='annual', last=LAST_YEARS)
-    balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=LAST_YEARS)
-    cash_flow = iex.stock.cash_flow(symbol, period='annual', last=LAST_YEARS)
+    income_statement = iex.stock.income_statement(symbol, period='annual', last=last_years)
+    balance_sheet = iex.stock.balance_sheet(symbol, period='annual', last=last_years)
+    cash_flow = iex.stock.cash_flow(symbol, period='annual', last=last_years)
     key_stats = iex.stock.key_stats(symbol)
 
-    # assertains that there are 4 years of data
-    assert(len(cash_flow['cashflow']) == LAST_YEARS) #, "Not enough data")
-    assert(len(income_statement['income']) == LAST_YEARS) #, "Not enough data")
-    assert(len(balance_sheet['balancesheet']) == LAST_YEARS) #, "Not enough data")
+    # assertains that there are the correct years of data
+    assert(len(cash_flow['cashflow']) == last_years) #, "Not enough data")
+    assert(len(income_statement['income']) == last_years) #, "Not enough data")
+    assert(len(balance_sheet['balancesheet']) == last_years) #, "Not enough data")
 
     # reference before assignment
     average_revenue_growth = 0
@@ -148,15 +148,15 @@ def dcf(symbol, creditRating):
     average_capex_ratio = 0
 
     # computes averages
-    for i in range(LAST_YEARS-1):
+    for i in range(last_years-1):
         average_revenue_growth += (income_statement['income'][i]['totalRevenue'] / income_statement['income'][i+1]['totalRevenue']) - 1
         average_operating_margin += income_statement['income'][i]['operatingIncome'] / income_statement['income'][i]['totalRevenue']
         average_tax_rate += income_statement['income'][i]['incomeTax'] / income_statement['income'][i]['pretaxIncome']
         average_capex_ratio += cash_flow['cashflow'][i]['capitalExpenditures'] / income_statement['income'][i]['totalRevenue']
-    average_revenue_growth /= LAST_YEARS - 1
-    average_operating_margin /= LAST_YEARS - 1
-    average_tax_rate /= LAST_YEARS - 1
-    average_capex_ratio /= LAST_YEARS - 1
+    average_revenue_growth /= last_years - 1
+    average_operating_margin /= last_years - 1
+    average_tax_rate /= last_years - 1
+    average_capex_ratio /= last_years - 1
 
     # current values for 'base year'
     current_revenue = income_statement['income'][0]['totalRevenue']
@@ -172,28 +172,26 @@ def dcf(symbol, creditRating):
 
     # calculates pro-forma revenues based on average revenue growth
     # will need to be changed to accept any growth rates
+    # NEW FUNCTION that returns a time-series of revenues
     pf_revenues = [current_revenue]
-    for a in range(MODEL_LENGTH):
+    for a in range(model_length):
         next_revenue = pf_revenues[a] * (1 + average_revenue_growth)
         pf_revenues.append(next_revenue)
-    vprint(pf_revenues)
 
     # calculates WACC for the year based on moving to terminal WACC
     wacc_yearly = [wacc(symbol, creditRating)]
-    for n in range(MODEL_LENGTH):
-        next_wacc = wacc_yearly[(len(wacc_yearly)-1)] - ((wacc()-terminal_wacc())/MODEL_LENGTH)
+    for n in range(model_length):
+        next_wacc = wacc_yearly[(len(wacc_yearly)-1)] - ((wacc()-terminal_wacc())/model_length)
         wacc_yearly.append(next_wacc)
-    vprint(wacc_yearly)
 
     discount_factor = []
-    for d in range(MODEL_LENGTH):
+    for d in range(model_length):
         if len(discount_factor) == 0:
             next_discount_factor = (1/(1+wacc_yearly[d]))
             discount_factor.append(next_discount_factor)
         else:
             next_discount_factor = discount_factor[(len(discount_factor)-1)] * (1/(1+wacc_yearly[d]))
             discount_factor.append(next_discount_factor)
-    vprint(discount_factor)
 
     # MAIN CALCULATIONS
     # for each year of the model this calculates present value and adds it to a list
@@ -206,21 +204,38 @@ def dcf(symbol, creditRating):
         next_fcff = next_ta_income - next_reinvestment
         next_pv = next_fcff * discount_factor[len(yearly_pv)-1]
         yearly_pv.append(next_pv)
-    vprint(yearly_pv)
 
     # sums the list of present values
     cumulative_present_value = 0
     for p in yearly_pv:
         cumulative_present_value += p
-    vprint(cumulative_present_value)
 
     # adds/subtracts from cumulative present value
     equity_value = cumulative_present_value + current_cash - current_debt
 
     # divides by shares outstanding
     value_per_share = equity_value / current_shares_outstanding
-    vprint(value_per_share)
+    return value_per_share
 
+"""def simple_dcf(symbol, creditRating, analyst=None, compare=None, wacc=None, income_statement=None, key_stats=None, current_price=None, risk_free=None):
+    if not income_statement:
+        income_statement = iex.stock.income_statement(symbol, period='quarterly', last=1)
+    if not cash_flow:
+        cash_flow = iex.stock.cash_flow(symbol, period='quarterly', last=1)
+    if not key_stats:
+        key_stats = iex.stock.key_stats(symbol)
+    if not current_price:
+        current_price = iex.stock.price(symbol)
+    if not wacc:
+        wacc = wacc(symbol, creditRating, income_statement=income_statement, current_price=current_price)
+    if not risk_free:
+            risk_free = usgov.yieldcurve.get_yield()['10year']
 
-#if __name__ == "__main__":
-#    dcf("AAPL")
+    # Simply a PV calculation using the growing perpetuity formula
+    current_shares_outstanding = key_stats['sharesOutstanding']
+    simple =  ((cash_flow['cashflow'][0]['cashFlow']) / (wacc - risk_free)) / current_shares_outstanding
+
+    if analyst:
+        analyst_recc = iex.stock.price_target(symbol)
+
+    if compare:"""

@@ -6,8 +6,16 @@ sys.path.insert(0, PATH_TO_API)
 import iex.stock
 from dcf import *
 
+class stock:
+    def __init__(self, symbol):
+        self.keystats = iex.stock.key_stats(symbol)
 
 
-#print(iex.stock.company('AAPL'))
+class sub:
+    def __init__(self,symbol):
+        symbol = stock(symbol)
+        self.sharesOutstanding = symbol.keystats['sharesOutstanding']
 
-print(beta('AAPL', period='1m', method='averageReg'))
+AAPL = sub('AAPL')
+
+print(AAPL.sharesOutstanding)

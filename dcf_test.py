@@ -1,21 +1,14 @@
 import os
 import sys
-import random
 PATH_TO_API = os.path.abspath("../FinMesh")
 sys.path.insert(0, PATH_TO_API)
 import iex.stock
-from dcf import *
+import usgov.yieldcurve
+import classes
+import common
 
-class stock:
-    def __init__(self, symbol):
-        self.keystats = iex.stock.key_stats(symbol)
+trial = iex.stock.key_stats('AAPL')
 
-
-class sub:
-    def __init__(self,symbol):
-        symbol = stock(symbol)
-        self.sharesOutstanding = symbol.keystats['sharesOutstanding']
-
-AAPL = sub('AAPL')
-
-print(AAPL.sharesOutstanding)
+for key in trial:
+    newkey = 'self.' + key
+    print(newkey)

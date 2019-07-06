@@ -8,7 +8,7 @@ import usgov.yieldcurve
 # Takes a list of values and finds the growth rate
 def growth_rate(values, growthType):
     # returns basic averages
-    if growthType = basic:
+    if growthType == basic:
         position = 0
         list_of_growth_rates = []
         for value in values[1:]:
@@ -17,7 +17,7 @@ def growth_rate(values, growthType):
         result = average(list_of_growth_rates)
 
     # returns CAGR
-    if growthType = cagr:
+    if growthType == cagr:
         result = (values[len(list-1)]-values[0]/values[0])/len(values)
 
     else:
@@ -41,7 +41,7 @@ def static_proforma_build(growth, base, years):
     counter = 0
     proforma_values = []
     while counter <= years:
-        if counter = 0:
+        if counter == 0:
             proforma_values.append(base * growth)
         else:
             proforma_values.append(proforma_values[counter-1] * growth)

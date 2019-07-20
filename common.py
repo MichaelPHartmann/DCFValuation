@@ -5,6 +5,8 @@ sys.path.insert(0, PATH_TO_API)
 import iex.stock
 import usgov.yieldcurve
 
+#Nothing
+
 # Takes a list of values and finds the growth rate
 def growth_rate(values, growthType):
     # returns basic averages

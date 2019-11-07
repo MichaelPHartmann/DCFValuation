@@ -1,3 +1,5 @@
+# These common functions are meant as abstractions from a monstrous dcf function.
+# Calculations here need no specific API input and can be used as standalone functions.
 
 #  ____                                    ____                   _   _
 # |  _ \ _____   _____ _ __  _   _  ___   / ___|_ __ _____      _| |_| |__
@@ -19,9 +21,9 @@ def historical_growth(series, method='annualized'):
         annualized_change = ((series[years_of_data-1]-series[0])/series[0])/years_of_data
         return annualized_change
 
-def forecasted_growth(base_value, length=5, method='incdec', base_growth=None, direction=None, start=0.025, end=0.05, specific_rates=None):
+def forecasted_revenue(base_value, length=5, method='uniform', base_growth=None, direction=None, start=None, end=None, specific_rates=None):
     fc_revenue = [base_value]
-    # Returns forecasted revenue based on a uniform revenue growth
+    # Returns forecasted revenue based on a uniform revenue growth.
     if method is 'uniform':
         assert base_growth != None, 'You must enter a value in the base_growth parameter!'
         for n in range(length):
@@ -49,6 +51,7 @@ def forecasted_growth(base_value, length=5, method='incdec', base_growth=None, d
             next_value = fc_revenue[r]*(1+specific_rates[r])
             fc_revenue.append(next_value)
         fc_revenue.pop(0)
+
     return fc_revenue
 
 #  __  __                 _          ____      _            _       _   _
@@ -57,6 +60,52 @@ def forecasted_growth(base_value, length=5, method='incdec', base_growth=None, d
 # | |  | | (_| | | | (_| | | | | | | |__| (_| | | (__| |_| | | (_| | |_| | (_) | | | |
 # |_|  |_|\__,_|_|  \__, |_|_| |_|  \____\__,_|_|\___|\__,_|_|\__,_|\__|_|\___/|_| |_|
 #                   |___/
+
+def historical_margin(operating_income, revenues, method='annualized'):
+    # This is a helper function designed to return actual values from a company as a base line.
+    # Returns a single value
+    assert len(operating_income) == len(revenues), 'Lists must be the same length!'
+    number_of_years = len(operating_income)
+    margins = []
+    if method is 'average':
+        for n in range(number_of_years-1):
+            margin = operating_income[n]/revenue[n]
+            margins.append(margin)
+        return (sum(margins)/number_of_years)
+    if method is 'annualized':
+        return (sum(operating_income)/sum(revenues))/number_of_years
+
+def forecasted_operating_income(series, method='uniform', base_margin=None, direction=None, start=None, end=None, specific_margins=None):
+    # Designed to take a list of revenues and return the operating income.
+    length = len(series)
+    fc_operating_income = []
+    # Returns forecasted operating margin based on a uniform operating margins.
+    if method is 'uniform':
+        assert base_margin != None, 'You must enter a value in the base_growth parameter!'
+        for v in series:
+            op_inc = v * base_margin
+            fc_operating_income.append(op_inc)
+    # Returns forecasted operating income based on an increasing or decreasing margins.
+    if method is 'incdec':
+        assert start != None, 'You must enter a value to the start parameter!'
+        assert end != None, 'You must enter a value to end parameter!'
+        increment = (float(end)-float(start))/(length-1)
+        margins_forward = [start]
+        for n in range(length-1):
+            next_margin = margins_forward[n]+increment
+            margins_forward.append(next_margin)
+        for i in range(length-1):
+            next_value = series[i] * margins_forward[i]
+            fc_operating_income.append(next_value)
+    # Returns forecasted operating income based on the specific margins entered.
+    if method is 'specific':
+        list_length = len(specific_margins)
+        assert list_length == length , f'Number of values in list ({list_length}) must be same as length parameter ({length})!'
+        for i in range(length):
+            next_value = series[i] * specific_margins[i]
+            fc_operating_income.append(next_value)
+
+    return fc_operating_income
 
 
 #  ____      _                     _                        _

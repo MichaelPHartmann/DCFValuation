@@ -74,6 +74,8 @@ def historical_margin(operating_income, revenues, method='annualized'):
         return (sum(margins)/number_of_years)
     if method is 'annualized':
         return (sum(operating_income)/sum(revenues))/number_of_years
+    else:
+        return 'Please enter a valid method!'
 
 def forecasted_operating_income(series, method='uniform', base_margin=None, direction=None, start=None, end=None, specific_margins=None):
     # Designed to take a list of revenues and return the operating income.
@@ -104,6 +106,8 @@ def forecasted_operating_income(series, method='uniform', base_margin=None, dire
         for i in range(length):
             next_value = series[i] * specific_margins[i]
             fc_operating_income.append(next_value)
+    else:
+        fc_operating_income = 'Please enter a valid method!'
 
     return fc_operating_income
 
@@ -114,6 +118,19 @@ def forecasted_operating_income(series, method='uniform', base_margin=None, dire
 # |  _ <  __/ | | | \ V /  __/\__ \ |_| | | | | |  __/ | | | |_
 # |_| \_\___|_|_| |_|\_/ \___||___/\__|_| |_| |_|\___|_| |_|\__|
 
+def historical_reinvestment(capex,base,method=None,return_corr=False,return_dev=False,return_list=False):
+    if method is 'growth':
+        yearly_growth = []
+
+        if return_list is True:
+            return average_growth
+        pass
+    if method is 'multiples':
+        assert len(capex) == len(base), 'Capex and base lists must be same length!'
+        yearly_multiples = []
+        pass
+    else:
+        return 'Please enter a valid method!'
 
 #  ____       _
 # | __ )  ___| |_ __ _

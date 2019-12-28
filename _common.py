@@ -21,7 +21,7 @@ def historical_growth(series, method='annualized'):
         annualized_change = ((series[years_of_data-1]-series[0])/series[0])/years_of_data
         return annualized_change
 
-def forecasted_revenue(base_value, length=5, method='uniform', base_growth=None, direction=None, start=None, end=None, specific_rates=None):
+def forecasted_revenue(base_value, method='uniform', length=5, base_growth=None, start=None, end=None, specific_rates=None):
     fc_revenue = [base_value]
     # Returns forecasted revenue based on a uniform revenue growth.
     if method is 'uniform':
@@ -77,7 +77,7 @@ def historical_margin(operating_income, revenues, method='annualized'):
     else:
         return 'Please enter a valid method!'
 
-def forecasted_operating_income(series, method='uniform', base_margin=None, direction=None, start=None, end=None, specific_margins=None):
+def forecasted_operating_income(series, method='uniform', base_margin=None, start=None, end=None, specific_margins=None):
     # Designed to take a list of revenues and return the operating income.
     length = len(series)
     fc_operating_income = []
@@ -119,24 +119,40 @@ def forecasted_operating_income(series, method='uniform', base_margin=None, dire
 # |_| \_\___|_|_| |_|\_/ \___||___/\__|_| |_| |_|\___|_| |_|\__|
 
 def historical_reinvestment(capex,base,method=None,return_corr=False,return_dev=False,return_list=False):
+    years_of_data = len(series)
     if method is 'growth':
         yearly_growth = []
-
+        for n in years_of_data:
+            growth = (capex[n]-capex[n-1])/capex[n-1]
+            yearly_growth.append(growth)
         if return_list is True:
-            return average_growth
-        pass
+            return yearly_growth
+        else:
+            return sum(yearly_growth)/(years_of_data-1)
     if method is 'multiples':
         assert len(capex) == len(base), 'Capex and base lists must be same length!'
         yearly_multiples = []
-        pass
+        for n in years_of_data:
+            multiple = capex[n-1]/base[n-1]
+            yearly_multiples.append(multiple)
+        if return_list is True:
+            return yearly_multiples
+        else:
+            return sum(yearly_multiples)/(years_of_data-1)
     else:
         return 'Please enter a valid method!'
+
+def forecasted_reinvestment(series, method='uniform', base_margin=None, direction=None, start=None, end=None, specific_investment=None):
+    length = len(series)
+    
+
 
 #  ____       _
 # | __ )  ___| |_ __ _
 # |  _ \ / _ \ __/ _` |
 # | |_) |  __/ || (_| |
 # |____/ \___|\__\__,_|
+
 
 
 #   ____          _            __    ____            _ _        _

@@ -8,15 +8,14 @@
 # |_| \_\___| \_/ \___|_| |_|\__,_|\___|  \____|_|  \___/ \_/\_/  \__|_| |_|
 
 def historical_growth(series, method='annualized'):
+    """Returns the average or annualized growth of each individual year."""
     years_of_data = len(series)
     change = []
-    # Returns the average growth of each individual year.
     if method is 'average' or None:
         for n in range(years_of_data-1):
             percent_change_yearly = (series[n+1]-series[n])/series[n]
             change.append(percent_change)
         return (sum(change)/years_of_data)
-    # Returns annualized growth.
     if method is 'annualized':
         annualized_change = ((series[years_of_data-1]-series[0])/series[0])/years_of_data
         return annualized_change
@@ -53,6 +52,30 @@ def forecasted_revenue(base_value, method='uniform', length=5, base_growth=None,
         fc_revenue.pop(0)
 
     return fc_revenue
+
+def forecast_revenue(base, method='uniform', length=5, growth=None, start=None, end=None, specific_rates=None):
+
+    if method is 'uniform':
+        assert growth != None, 'You must enter a value in the base_growth parameter!'
+        forecast_instantiation = forecast()
+        result = forecast_instantiation.uniform(base, growth, length)
+
+    if method is 'incdec':
+        assert start != None, 'You must enter a value to the start parameter!'
+        assert end != None, 'You must enter a value to end parameter!'
+        forecast_instantiation = forecast()
+        result = forecast_instantiation.incdec(base, start, end, length)
+
+    if method is 'specific':
+        list_length = len(specific_rates)
+        assert list_length == length , f'Number of values in list ({list_length}) must be same as length parameter ({length})!'
+        forecast_instantiation = forecast()
+        result = forecast_instantiation(base, specific_rates, length)
+
+    else:
+        result = 'Please enter a valid method!'
+
+    return result
 
 #  __  __                 _          ____      _            _       _   _
 # |  \/  | __ _ _ __ __ _(_)_ __    / ___|__ _| | ___ _   _| | __ _| |_(_) ___  _ __
@@ -111,6 +134,29 @@ def forecasted_operating_income(series, method='uniform', base_margin=None, star
 
     return fc_operating_income
 
+def forecast_revenue(base, method='uniform', length=5, growth=None, start=None, end=None, specific_rates=None):
+
+    if method is 'uniform':
+        assert growth != None, 'You must enter a value in the base_growth parameter!'
+        forecast_instantiation = forecast()
+        result = forecast_instantiation.uniform(base, growth, length)
+
+    if method is 'incdec':
+        assert start != None, 'You must enter a value to the start parameter!'
+        assert end != None, 'You must enter a value to end parameter!'
+        forecast_instantiation = forecast()
+        result = forecast_instantiation.incdec(base, start, end, length)
+
+    if method is 'specific':
+        list_length = len(specific_rates)
+        assert list_length == length , f'Number of values in list ({list_length}) must be same as length parameter ({length})!'
+        forecast_instantiation = forecast()
+        result = forecast_instantiation(base, specific_rates, length)
+
+    else:
+        fc_operating_income = 'Please enter a valid method!'
+
+    return result
 
 #  ____      _                     _                        _
 # |  _ \ ___(_)_ ____   _____  ___| |_ _ __ ___   ___ _ __ | |_
@@ -144,7 +190,7 @@ def historical_reinvestment(capex,base,method=None,return_corr=False,return_dev=
 
 def forecasted_reinvestment(series, method='uniform', base_margin=None, direction=None, start=None, end=None, specific_investment=None):
     length = len(series)
-    
+
 
 
 #  ____       _
